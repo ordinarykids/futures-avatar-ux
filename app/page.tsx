@@ -11,7 +11,7 @@ export default function App() {
           <AiAvatarPanel
             agentName="John"
             avatarSrc="/avatar.png"
-            state="idle"
+            state="default"
             captionsText="Hello, how can I help you today?"
             // className="w-[300px] h-[300px]"
           />
