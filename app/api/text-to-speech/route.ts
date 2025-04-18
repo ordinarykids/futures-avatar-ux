@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ElevenLabsClient } from "elevenlabs"; // Import the client
+import { Readable } from "stream"; // Import Readable from stream
 
 // --- Configuration ---
 // The client defaults to process.env.ELEVENLABS_API_KEY, but we can be explicit
@@ -67,6 +68,9 @@ export async function POST(req: NextRequest) {
 
     console.log("Successfully received audio stream from ElevenLabs client.");
 
+    // Convert the Node.js Readable stream to a Web API ReadableStream
+    const webStream = Readable.toWeb(audioStream);
+
     // The generate function returns a ReadableStream, which NextResponse can handle directly.
     // We need to tell the client what kind of audio it is.
     // Determine content type based on requested output_format (or default)
@@ -74,7 +78,8 @@ export async function POST(req: NextRequest) {
     const contentType = "audio/mpeg"; // Adjust if you change output_format
 
     // Return the stream directly
-    return new NextResponse(audioStream, {
+    // Cast to 'any' to resolve type conflict between Node.js and Web API ReadableStream
+    return new NextResponse(webStream as any, {
       status: 200,
       headers: {
         "Content-Type": contentType,
