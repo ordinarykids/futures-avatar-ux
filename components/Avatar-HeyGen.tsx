@@ -387,14 +387,20 @@ const InteractiveAvatar: React.ForwardRefRenderFunction<
           heygenAudioWs.current.close();
           heygenAudioWs.current = null;
         }
+      } finally {
+        // Close the WebSocket if still open and clear sending flag
+        if (heygenAudioWs.current) {
+          heygenAudioWs.current.close();
+          heygenAudioWs.current = null;
+        }
+        setSendingAudioFile(null);
       }
     }
   );
 
   const handleSendTestAudio = useMemoizedFn(async (audioFilename: string) => {
-    const wsUrl = (data as any)?.url;
-    console.log(data.url);
-    console.log("handleSendTestAudio - Checking data for server_url:", data);
+    const wsUrl = (data as any)?.realtime_endpoint;
+    console.log("handleSendTestAudio - Using realtime_endpoint:", wsUrl, data);
     if (!wsUrl) {
       alert("HeyGen session not started or endpoint missing.");
       return;
@@ -430,8 +436,8 @@ const InteractiveAvatar: React.ForwardRefRenderFunction<
       alert("Please enter some text to synthesize.");
       return;
     }
-    const wsUrl = (data as any)?.server_url;
-    console.log("handleSendTextToTTS - Checking data for server_url:", data);
+    const wsUrl = (data as any)?.realtime_endpoint;
+    console.log("handleSendTextToTTS - Using realtime_endpoint:", wsUrl, data);
     if (!wsUrl) {
       alert("HeyGen session not started or endpoint missing.");
       return;
