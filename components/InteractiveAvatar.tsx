@@ -369,7 +369,7 @@ export default function InteractiveAvatar() {
   );
 
   const handleSendTestAudio = useMemoizedFn(async (audioFilename: string) => {
-    const wsUrl = data?.realtime_endpoint;
+    const wsUrl = (data as any)?.server_url;
     if (!wsUrl) {
       alert("HeyGen session not started or endpoint missing.");
       return;
@@ -405,7 +405,7 @@ export default function InteractiveAvatar() {
       alert("Please enter some text to synthesize.");
       return;
     }
-    const wsUrl = data?.realtime_endpoint;
+    const wsUrl = (data as any)?.server_url;
     if (!wsUrl) {
       alert("HeyGen session not started or endpoint missing.");
       return;

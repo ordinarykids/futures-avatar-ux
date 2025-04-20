@@ -8,16 +8,16 @@
   "extends": [
     // "plugin:@next/next/recommended", // Temporarily disabled for deployment
     // "plugin:react/recommended", // Temporarily disabled for deployment
-    "plugin:prettier/recommended" // Keeping Prettier
+    // "plugin:prettier/recommended" // Keeping Prettier
     // "plugin:react-hooks/recommended", // Temporarily disabled for deployment
     // "plugin:jsx-a11y/recommended" // Temporarily disabled for deployment
   ],
   "plugins": [
-    // "react",
-    // "unused-imports",
-    // "import",
-    // "@typescript-eslint",
-    // "jsx-a11y",
+    "react",
+    "unused-imports",
+    "import",
+    "@typescript-eslint",
+    "jsx-a11y",
     "prettier"
   ],
   "parser": "@typescript-eslint/parser",

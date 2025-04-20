@@ -21,15 +21,35 @@ import {
   Tab,
   Textarea,
 } from "@nextui-org/react";
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { useMemoizedFn, usePrevious } from "ahooks";
 import { v4 as uuidv4 } from "uuid";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 import { Button } from "@/components/ui/button";
 import { AVATARS, STT_LANGUAGE_LIST } from "@/app/lib/constants";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export default function InteractiveAvatar() {
+// Define props interface
+interface InteractiveAvatarProps {
+  className?: string;
+}
+
+// Define the handle interface
+export interface InteractiveAvatarHandle {
+  handleSendTestAudio: (filename: string) => Promise<void>;
+}
+
+const InteractiveAvatar: React.ForwardRefRenderFunction<
+  InteractiveAvatarHandle,
+  InteractiveAvatarProps
+> = ({ className }, ref) => {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
   const [stream, setStream] = useState<MediaStream>();
@@ -62,6 +82,7 @@ export default function InteractiveAvatar() {
       const token = await response.text();
       console.log("Access Token fetched:", token ? "<received>" : "<empty>");
       setAccessToken(token);
+      if (!token) console.error("Access token was empty!");
       return token;
     } catch (error) {
       console.error("Error fetching access token:", error);
@@ -128,6 +149,7 @@ export default function InteractiveAvatar() {
 
       setData(res);
       // default to voice mode
+      console.log("HeyGen startSession response (data):", res);
       await avatar.current?.startVoiceChat({
         useSilencePrompt: false,
       });
@@ -213,11 +235,11 @@ export default function InteractiveAvatar() {
       wsUrl: string,
       sourceDescription: string = "audio"
     ) => {
-      if (sendingAudioFile !== null) {
-        console.log(`Already sending ${sendingAudioFile}, please wait.`);
-        alert(`Already sending ${sendingAudioFile}, please wait.`);
-        return;
-      }
+      // if (sendingAudioFile !== null) {
+      //   console.log(`Already sending ${sendingAudioFile}, please wait.`);
+      //   alert(`Already sending ${sendingAudioFile}, please wait.`);
+      //   return;
+      // }
 
       setSendingAudioFile(sourceDescription);
       setDebug(`Connecting directly to HeyGen for ${sourceDescription}...`);
@@ -230,6 +252,7 @@ export default function InteractiveAvatar() {
       console.log(
         `Attempting to connect directly to HeyGen Audio WS: ${wsUrl} for ${sourceDescription}`
       );
+      console.log("Attempting to create WebSocket with URL:", wsUrl);
 
       try {
         const ws = new WebSocket(wsUrl);
@@ -369,7 +392,9 @@ export default function InteractiveAvatar() {
   );
 
   const handleSendTestAudio = useMemoizedFn(async (audioFilename: string) => {
-    const wsUrl = data?.realtime_endpoint;
+    const wsUrl = (data as any)?.url;
+    console.log(data.url);
+    console.log("handleSendTestAudio - Checking data for server_url:", data);
     if (!wsUrl) {
       alert("HeyGen session not started or endpoint missing.");
       return;
@@ -405,7 +430,8 @@ export default function InteractiveAvatar() {
       alert("Please enter some text to synthesize.");
       return;
     }
-    const wsUrl = data?.realtime_endpoint;
+    const wsUrl = (data as any)?.server_url;
+    console.log("handleSendTextToTTS - Checking data for server_url:", data);
     if (!wsUrl) {
       alert("HeyGen session not started or endpoint missing.");
       return;
@@ -449,10 +475,20 @@ export default function InteractiveAvatar() {
     }
   });
 
+  // Expose the function via ref
+  useImperativeHandle(ref, () => ({
+    handleSendTestAudio,
+  }));
+
   return (
     <>
       {stream ? (
-        <div className="h-full w-full justify-center items-center flex rounded-lg overflow-hidden mx-auto relative">
+        <div
+          className={cn(
+            "h-full w-full justify-center items-center flex rounded-lg overflow-hidden mx-auto relative",
+            className
+          )}
+        >
           <video
             ref={mediaStream}
             autoPlay
@@ -480,7 +516,7 @@ export default function InteractiveAvatar() {
         </div>
       )}
 
-      <div className="flex flex-row gap-2 justify-center pt-4">
+      <div className="fixed z-10 bottom-4 left-4">
         {["1.wav", "2.wav", "3.wav", "long2.mp3"].map((filename) => {
           const isLoading = sendingAudioFile === filename;
           return (
@@ -574,4 +610,6 @@ export default function InteractiveAvatar() {
       </div>
     </>
   );
-}
+};
+
+export default forwardRef(InteractiveAvatar);

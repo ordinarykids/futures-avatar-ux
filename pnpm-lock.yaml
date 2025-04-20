@@ -129,6 +129,9 @@ importers:
       '@next/eslint-plugin-next':
         specifier: ^15.3.1
         version: 15.3.1
+      '@types/diff-match-patch':
+        specifier: ^1.0.36
+        version: 1.0.36
       '@types/node':
         specifier: 20.5.7
         version: 20.5.7
@@ -180,6 +183,9 @@ importers:
       eslint-plugin-unused-imports:
         specifier: ^3.2.0
         version: 3.2.0(@typescript-eslint/eslint-plugin@7.2.0(@typescript-eslint/parser@7.2.0(eslint@8.57.0)(typescript@5.0.4))(eslint@8.57.0)(typescript@5.0.4))(eslint@8.57.0)
+      json-schema:
+        specifier: ^0.4.0
+        version: 0.4.0
       postcss:
         specifier: 8.4.38
         version: 8.4.38

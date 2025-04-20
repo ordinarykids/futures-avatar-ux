@@ -13,7 +13,7 @@ import {
   X,
   Square,
 } from "lucide-react";
-import InteractiveAvatar from "./Avatar-HeyGen";
+import InteractiveAvatar, { InteractiveAvatarHandle } from "./Avatar-HeyGen";
 
 /**
  * Props for the AI Avatar panel component.
@@ -48,9 +48,11 @@ export default function AiAvatarPanel({
   const [isDragging, setIsDragging] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const dragRef = useRef<HTMLDivElement>(null);
+  const interactiveAvatarRef = useRef<InteractiveAvatarHandle>(null);
+  const [isMaximized, setIsMaximized] = useState(false);
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLElement>) => {
-    if (!dragRef.current) return;
+    if (!dragRef.current || isMaximized) return;
     setIsDragging(true);
     const rect = dragRef.current.getBoundingClientRect();
     setOffset({
@@ -78,6 +80,15 @@ export default function AiAvatarPanel({
     document.body.style.userSelect = "";
   }, []);
 
+  const handleDoubleClick = useCallback(() => {
+    setIsMaximized((prev) => {
+      if (!prev) {
+        setPosition({ x: 0, y: 0 });
+      }
+      return !prev;
+    });
+  }, []);
+
   useEffect(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
@@ -99,21 +110,33 @@ export default function AiAvatarPanel({
     <div
       ref={dragRef}
       className={cn(
-        "absolute flex flex-col rounded-2xl shadow-lg overflow-hidden bg-background aspect-[9/16] w-72 sm:w-80",
+        "absolute flex flex-col rounded-2xl shadow-lg overflow-hidden bg-background transition-all duration-300 ease-in-out",
+        isMaximized
+          ? "inset-0 w-full h-full aspect-auto"
+          : "aspect-[9/16] w-72 sm:w-80",
         className
       )}
-      style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-      }}
+      style={
+        !isMaximized
+          ? {
+              left: `${position.x}px`,
+              top: `${position.y}px`,
+            }
+          : {}
+      }
     >
       {/* Header */}
       <header
         className={cn(
           "z-20 flex items-center justify-between px-4 py-2 bg-muted/60 backdrop-blur-md",
-          isDragging ? "cursor-grabbing" : "cursor-grab"
+          isMaximized
+            ? "cursor-default"
+            : isDragging
+              ? "cursor-grabbing"
+              : "cursor-grab"
         )}
         onMouseDown={handleMouseDown}
+        onDoubleClick={handleDoubleClick}
       >
         <span className="font-medium truncate text-sm">
           Intuit Intelligence
@@ -135,6 +158,7 @@ export default function AiAvatarPanel({
       {/* Video / poster */}
       <div className="relative flex-1 bg-black/10">
         <InteractiveAvatar
+          ref={interactiveAvatarRef}
           className={cn(
             "object-cover object-center transition-opacity duration-300",
             isDisconnected && "opacity-40 grayscale"
@@ -165,6 +189,12 @@ export default function AiAvatarPanel({
       {/* Control bar */}
       <div className="absolute bottom-4 inset-x-0 px-6 flex justify-between items-center pointer-events-none">
         <ControlButton icon={<Volume2 className="h-5 w-5" />} />
+        <ControlButton
+          icon={<Volume2 className="h-5 w-5" />}
+          onClick={() =>
+            interactiveAvatarRef.current?.handleSendTestAudio("1.wav")
+          }
+        />
         <ControlButton
           icon={
             isDisconnected ? (
