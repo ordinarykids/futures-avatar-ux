@@ -66,6 +66,8 @@ const InteractiveAvatar: React.ForwardRefRenderFunction<
   const [chatMode, setChatMode] = useState("text_mode");
   const [isUserTalking, setIsUserTalking] = useState(false);
   const [sendingAudioFile, setSendingAudioFile] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
   const heygenAudioWs = useRef<WebSocket | null>(null);
   const [ttsInputText, setTtsInputText] = useState<string>("");
   const [isSendingTts, setIsSendingTts] = useState<boolean>(false);
@@ -481,6 +483,64 @@ const InteractiveAvatar: React.ForwardRefRenderFunction<
     }
   });
 
+  // Handle client-side voice dialog using server-side Deepgram+OpenAI+TTS
+  const handleVoiceDialog = useMemoizedFn(async () => {
+    // Ensure we have the HeyGen WS URL
+    if (!data?.url) {
+      alert("HeyGen session not started or endpoint missing.");
+      return;
+    }
+    const wsUrl = data.url;
+    // Collect recorded chunks as Blobs
+    let chunks: Blob[] = [];
+    if (!isRecording) {
+      // start recording
+      try {
+        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const recorder = new MediaRecorder(micStream);
+        recorderRef.current = recorder;
+        recorder.ondataavailable = (e: BlobEvent) => {
+          chunks.push(e.data);
+        };
+        recorder.start();
+        setDebug("Recording user audio...");
+        setIsRecording(true);
+        return;
+      } catch (error: any) {
+        console.error("Error accessing microphone:", error);
+        setDebug("Microphone error: " + error.message);
+        return;
+      }
+    }
+    // stop recording and send to dialog endpoint
+    const recorder = recorderRef.current;
+    if (recorder) {
+      recorder.ondataavailable = (e: BlobEvent) => {
+        chunks.push(e.data);
+      };
+      recorder.onstop = async () => {
+        setDebug("Processing voice dialog...");
+        setSendingAudioFile("voice-dialog");
+        const blob = new Blob(chunks, { type: chunks[0]?.type || "audio/webm" });
+        const form = new FormData();
+        form.append("audio", blob, "voice.webm");
+        try {
+          const res = await fetch("/api/openai-dialog", { method: "POST", body: form });
+          if (!res.ok) throw new Error("Voice dialog API error");
+          const arrayBuffer = await res.arrayBuffer();
+          await processAndSendAudioToHeygen(arrayBuffer, wsUrl, "voice-dialog");
+        } catch (err: any) {
+          console.error(err);
+          setDebug("Voice dialog failed: " + err.message);
+        } finally {
+          setSendingAudioFile(null);
+        }
+      };
+      recorder.stop();
+      setIsRecording(false);
+    }
+  });
+
   // Expose the function via ref
   useImperativeHandle(ref, () => ({
     handleSendTestAudio,
@@ -522,21 +582,28 @@ const InteractiveAvatar: React.ForwardRefRenderFunction<
         </div>
       )}
 
-      <div className="fixed z-10 bottom-4 left-4">
-        {["1.wav", "2.wav", "3.wav", "long2.mp3"].map((filename) => {
-          const isLoading = sendingAudioFile === filename;
-          return (
-            <Button
-              key={filename}
-              variant="secondary"
-              onClick={() => handleSendTestAudio(filename)}
-              disabled={sendingAudioFile !== null || isLoading}
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isLoading ? "Sending..." : `Send ${filename} (Direct)`}
-            </Button>
-          );
-        })}
+      <div className="fixed z-10 bottom-4 left-4 flex flex-col space-y-2">
+        { ["1.wav","2.wav","3.wav","long2.mp3"].map((filename) => {
+            const isLoading = sendingAudioFile === filename;
+            return (
+              <Button
+                key={filename}
+                variant="secondary"
+                onClick={() => handleSendTestAudio(filename)}
+                disabled={sendingAudioFile !== null || isLoading}
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isLoading ? "Sending..." : `Send ${filename} (Direct)`}
+              </Button>
+            );
+          }) }
+        <Button
+          variant="default"
+          onClick={handleVoiceDialog}
+          disabled={sendingAudioFile !== null}
+        >
+          {isRecording ? "Stop and Send" : "Voice Chat"}
+        </Button>
       </div>
 
       {stream && (
