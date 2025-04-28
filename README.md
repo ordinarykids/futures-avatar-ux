@@ -7,7 +7,7 @@ Feel free to play around with the existing code and please leave any feedback fo
 
 ## Getting Started FAQ
 
-### Setting up the demo
+### Setting up the demodssd
 
 1. Clone this repo
 
