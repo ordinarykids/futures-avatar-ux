@@ -43,7 +43,7 @@ interface InteractiveAvatarProps {
 
 // Define the handle interface
 export interface InteractiveAvatarHandle {
-  handleSendTestAudio: (filename: string) => Promise<void>;
+  handleSendTestAudio: (filename: string | ArrayBuffer) => Promise<void>;
 }
 
 const InteractiveAvatar: React.ForwardRefRenderFunction<
@@ -400,38 +400,70 @@ const InteractiveAvatar: React.ForwardRefRenderFunction<
     }
   );
 
-  const handleSendTestAudio = useMemoizedFn(async (audioFilename: string) => {
-    const wsUrl = (data as any)?.realtime_endpoint;
-    console.log("handleSendTestAudio - Using realtime_endpoint:", wsUrl, data);
-    if (!wsUrl) {
-      alert("HeyGen session not started or endpoint missing.");
-      return;
-    }
-
-    if (sendingAudioFile !== null) {
-      alert(`Already sending ${sendingAudioFile}, please wait.`);
-      return;
-    }
-
-    setSendingAudioFile(audioFilename);
-    setDebug(`Fetching ${audioFilename}...`);
-
-    try {
-      const response = await fetch(`/${audioFilename}`);
-      if (!response.ok) {
-        throw new Error(
-          `Failed to fetch ${audioFilename}: ${response.statusText}`
-        );
+  const handleSendTestAudio = useMemoizedFn(
+    async (audioInput: string | ArrayBuffer) => {
+      const wsUrl = (data as any)?.realtime_endpoint;
+      console.log(
+        "handleSendTestAudio - Using realtime_endpoint:",
+        wsUrl,
+        data
+      );
+      if (!wsUrl) {
+        alert("HeyGen session not started or endpoint missing.");
+        return;
       }
-      const arrayBuffer = await response.arrayBuffer();
 
-      await processAndSendAudioToHeygen(arrayBuffer, wsUrl, audioFilename);
-    } catch (error: any) {
-      console.error(`Error fetching/sending ${audioFilename}:`, error);
-      setDebug(`Error with ${audioFilename}: ${error.message}`);
-      setSendingAudioFile(null);
+      if (sendingAudioFile !== null) {
+        alert(`Already sending ${sendingAudioFile}, please wait.`);
+        return;
+      }
+
+      let arrayBuffer: ArrayBuffer;
+      const sourceLabel =
+        typeof audioInput === "string" ? audioInput : "Generated Audio";
+
+      setSendingAudioFile(sourceLabel);
+
+      try {
+        if (typeof audioInput === "string") {
+          // Handle string input (either file path or blob URL)
+          setDebug(`Fetching ${audioInput}...`);
+
+          // Don't try to fetch blob URLs from the server
+          if (audioInput.startsWith("blob:")) {
+            try {
+              const response = await fetch(audioInput);
+              arrayBuffer = await response.arrayBuffer();
+            } catch (error) {
+              // If fetch fails on blob URL, show error and return
+              console.error(`Error fetching blob URL: ${error}`);
+              setDebug(`Error with blob URL: ${error}`);
+              setSendingAudioFile(null);
+              return;
+            }
+          } else {
+            // Regular file path
+            const response = await fetch(`/${audioInput}`);
+            if (!response.ok) {
+              throw new Error(
+                `Failed to fetch ${audioInput}: ${response.statusText}`
+              );
+            }
+            arrayBuffer = await response.arrayBuffer();
+          }
+        } else {
+          // Handle ArrayBuffer input directly
+          arrayBuffer = audioInput;
+        }
+
+        await processAndSendAudioToHeygen(arrayBuffer, wsUrl, sourceLabel);
+      } catch (error: any) {
+        console.error(`Error fetching/sending ${sourceLabel}:`, error);
+        setDebug(`Error with ${sourceLabel}: ${error.message}`);
+        setSendingAudioFile(null);
+      }
     }
-  });
+  );
 
   const handleSendTextToTTS = useMemoizedFn(async () => {
     if (!ttsInputText.trim()) {
@@ -496,7 +528,9 @@ const InteractiveAvatar: React.ForwardRefRenderFunction<
     if (!isRecording) {
       // start recording
       try {
-        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const micStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
         const recorder = new MediaRecorder(micStream);
         recorderRef.current = recorder;
         recorder.ondataavailable = (e: BlobEvent) => {
@@ -521,11 +555,16 @@ const InteractiveAvatar: React.ForwardRefRenderFunction<
       recorder.onstop = async () => {
         setDebug("Processing voice dialog...");
         setSendingAudioFile("voice-dialog");
-        const blob = new Blob(chunks, { type: chunks[0]?.type || "audio/webm" });
+        const blob = new Blob(chunks, {
+          type: chunks[0]?.type || "audio/webm",
+        });
         const form = new FormData();
         form.append("audio", blob, "voice.webm");
         try {
-          const res = await fetch("/api/openai-dialog", { method: "POST", body: form });
+          const res = await fetch("/api/openai-dialog", {
+            method: "POST",
+            body: form,
+          });
           if (!res.ok) throw new Error("Voice dialog API error");
           const arrayBuffer = await res.arrayBuffer();
           await processAndSendAudioToHeygen(arrayBuffer, wsUrl, "voice-dialog");
@@ -583,20 +622,20 @@ const InteractiveAvatar: React.ForwardRefRenderFunction<
       )}
 
       <div className="fixed z-10 bottom-4 left-4 flex flex-col space-y-2">
-        { ["1.wav","2.wav","3.wav","long2.mp3"].map((filename) => {
-            const isLoading = sendingAudioFile === filename;
-            return (
-              <Button
-                key={filename}
-                variant="secondary"
-                onClick={() => handleSendTestAudio(filename)}
-                disabled={sendingAudioFile !== null || isLoading}
-              >
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isLoading ? "Sending..." : `Send ${filename} (Direct)`}
-              </Button>
-            );
-          }) }
+        {["1.wav", "2.wav", "3.wav", "long2.mp3"].map((filename) => {
+          const isLoading = sendingAudioFile === filename;
+          return (
+            <Button
+              key={filename}
+              variant="secondary"
+              onClick={() => handleSendTestAudio(filename)}
+              disabled={sendingAudioFile !== null || isLoading}
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isLoading ? "Sending..." : `Send ${filename} (Direct)`}
+            </Button>
+          );
+        })}
         <Button
           variant="default"
           onClick={handleVoiceDialog}

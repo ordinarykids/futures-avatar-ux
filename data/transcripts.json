@@ -1,0 +1,38 @@
+[
+  {
+    "speaker": "Agent",
+    "text": "Hey, thank you for contacting QuickBooks Live. My name is Baden."
+  },
+  { "speaker": "Customer", "text": "That" },
+  {
+    "speaker": "Agent",
+    "text": "And I've been in the accounting field for a little over 31 years."
+  },
+  { "speaker": "Customer", "text": "Uh oh, just press up." },
+  { "speaker": "Agent", "text": "And um basically." },
+  { "speaker": "Agent", "text": "Uh pardon?" },
+  { "speaker": "Agent", "text": "Hello?" },
+  { "speaker": "Customer", "text": "Seeker's not loud, huh? Are you there?" },
+  { "speaker": "Customer", "text": "You" },
+  { "speaker": "Agent", "text": "Yep, I'm here. Are you?" },
+  { "speaker": "Agent", "text": "There we go. Uh, can you hear me now?" },
+  { "speaker": "Customer", "text": "OK, the phone hung up." },
+  {
+    "speaker": "Customer",
+    "text": "Yeah, we can hear you through the PC. It's just a phone call."
+  },
+  {
+    "speaker": "Agent",
+    "text": "Yeah, that it sometimes does that, but it's OK because."
+  },
+  {
+    "speaker": "Customer",
+    "text": "Yeah, it connected. You were talking on the phone. There's 2 of us here, baby."
+  },
+  { "speaker": "Agent", "text": "All right, um," },
+  { "speaker": "Agent", "text": "So, um," },
+  {
+    "speaker": "Agent",
+    "text": "Uh, before we get started, let me verify the company name, please."
+  }
+]
